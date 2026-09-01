@@ -8,38 +8,58 @@ window.CLASS_CONFIG = {
   // ── 1. Supabase 연결 정보 ──────────────────────────────────
   //    Supabase 대시보드 → 프로젝트 → Connect 버튼 (또는 Settings → API Keys)
   //    에서 복사한 값을 따옴표 안에 붙여넣으세요.
-  SUPABASE_URL: "https://여기에-프로젝트주소.supabase.co",
-  SUPABASE_KEY: "여기에-공개키(sb_publishable_... 또는 eyJ... 로 시작)",
+  SUPABASE_URL: "https://rklwgzzqagnocyuynmgv.supabase.cosupabase.co",
+  SUPABASE_KEY: "sb_publishable_ShiLG6aBfZspwCTH5h29qA_FeMOVfDJ",
 
 
   // ── 2. 학급 이름 ──────────────────────────────────────────
-  CLASS_NAME: "3학년 2반",
+  CLASS_NAME: "1학년 9반",
   SCHOOL_YEAR: "2026학년도",
 
 
   // ── 3. 학생 명단 (번호와 이름을 우리 반에 맞게 바꾸세요) ──
   //    줄을 지우거나 추가하면 됩니다. 마지막 줄 뒤 쉼표는 있어도 됩니다.
   STUDENTS: [
-    { no: 1,  name: "김민준" },
-    { no: 2,  name: "이서연" },
-    { no: 3,  name: "박도윤" },
-    { no: 4,  name: "최지우" },
-    { no: 5,  name: "정하준" },
-    { no: 6,  name: "강수아" },
-    { no: 7,  name: "조은우" },
-    { no: 8,  name: "윤채원" },
-    { no: 9,  name: "임시우" },
-    { no: 10, name: "한예린" },
-  ],
-
+    { no: 1,  name: "곽서진" },
+    { no: 2,  name: "권민정" },
+    { no: 3,  name: "김나윤" },
+    { no: 4,  name: "김수연" },
+    { no: 5,  name: "김시현" },
+    { no: 6,  name: "김예윤" },
+    { no: 7,  name: "김인애" },
+    { no: 8,  name: "김해나" },
+    { no: 9,  name: "김효연" },
+    { no: 10, name: "박시현" },
+    { no: 11, name: "송가현" },
+    { no: 12, name: "안소연" },
+    { no: 13, name: "안예주" },
+    { no: 14, name: "안채윤" },
+    { no: 15, name: "여승연" },
+    { no: 16, name: "예채원" },  
+    { no: 17, name: "오다윤" },
+    { no: 18, name: "오수연" },
+    { no: 19, name: "오윤하" }, 
+    { no: 20, name: "윤정원" },
+    { no: 21, name: "이세아" },
+    { no: 22, name: "이유빈" },
+    { no: 23, name: "이지유" },
+    { no: 24, name: "이채연" },  
+    { no: 25, name: "이채윤" },
+    { no: 26, name: "임슬빈" },
+    { no: 27, name: "정지민" },
+    { no: 28, name: "진현성" },
+    { no: 29, name: "최서윤" },
+    { no: 30, name: "허시현" },
+    { no: 31, name: "최현서" },
+],
 
   // ── 4. 활동 영역 (필요하면 고치세요) ──────────────────────
   CATEGORIES: [
     "자율활동",
-    "동아리활동",
     "진로활동",
-    "봉사활동",
-    "학교행사",
+    "독서활동",
+    "사진보관함",
+    "게시판",
     "기타",
   ],
 
