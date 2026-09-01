@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학급 활동 기록장</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📓</text></svg>">
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="inner">
+    <h1 id="siteTitle">학급 활동 기록장</h1>
+    <p class="sub" id="siteSub"></p>
+    <nav>
+      <a href="index.html" class="on">기록하기</a>
+      <a href="admin.html">선생님용 모아보기</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div id="setupWarning" class="setup-warning" hidden>
+    아직 Supabase 연결 정보가 입력되지 않았습니다.
+    <code>config.js</code> 파일의 <code>SUPABASE_URL</code>과 <code>SUPABASE_KEY</code>를 채워 주세요.
+  </div>
+
+  <p class="notice" id="notice"></p>
+
+  <!-- 작성 폼 -->
+  <section class="card">
+    <h2 id="formTitle">활동 기록하기</h2>
+    <p class="hint" id="formHint">활동이 끝난 뒤 기억이 생생할 때 바로 적어 두세요.</p>
+
+    <form id="form" autocomplete="off">
+      <input type="hidden" id="editId">
+
+      <div class="row">
+        <div class="field">
+          <label for="studentNo">번호<span class="req">*</span></label>
+          <select id="studentNo" required></select>
+        </div>
+        <div class="field">
+          <label for="studentName">이름</label>
+          <input type="text" id="studentName" readonly>
+        </div>
+        <div class="field">
+          <label for="activityDate">활동 날짜<span class="req">*</span></label>
+          <input type="date" id="activityDate" required>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="category">활동 영역<span class="req">*</span></label>
+          <select id="category" required></select>
+        </div>
+        <div class="field" style="flex:2 1 260px">
+          <label for="title">활동명<span class="req">*</span>
+            <span class="tip">예) 학급 체육대회 응원 준비</span></label>
+          <input type="text" id="title" maxlength="60" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="content">활동 내용<span class="req">*</span>
+          <span class="tip">무엇을, 어떻게 했는지</span></label>
+        <textarea id="content" maxlength="600" required
+          placeholder="언제 어디서 누구와 무슨 일을 했는지 구체적으로 써 주세요."></textarea>
+        <div class="counter"><span data-count="content">0</span> / 600자</div>
+      </div>
+
+      <div class="field">
+        <label for="role">나의 역할 및 기여한 점<span class="req">*</span>
+          <span class="tip">내가 맡은 일과 그 결과</span></label>
+        <textarea id="role" maxlength="600" required
+          placeholder="예) 응원 구호를 정하는 일을 맡아 친구들의 의견을 모으고 세 가지 안 중 하나를 함께 골랐습니다."></textarea>
+        <div class="counter"><span data-count="role">0</span> / 600자</div>
+      </div>
+
+      <div class="field">
+        <label for="reflection">배우고 느낀 점<span class="req">*</span>
+          <span class="tip">활동 전후로 달라진 생각이나 태도</span></label>
+        <textarea id="reflection" maxlength="600" required
+          placeholder="무엇을 새로 알게 되었는지, 앞으로 어떻게 하고 싶은지 써 주세요."></textarea>
+        <div class="counter"><span data-count="reflection">0</span> / 600자</div>
+      </div>
+
+      <div class="field">
+        <label for="pin">나만의 PIN (숫자 4자리)<span class="req">*</span>
+          <span class="tip">나중에 이 글을 고치거나 지울 때 필요해요. 꼭 기억하세요.</span></label>
+        <input type="text" id="pin" inputmode="numeric" pattern="[0-9]{4,8}"
+               maxlength="8" placeholder="0000" required style="max-width:200px"
+               title="숫자 4자리 이상 8자리 이하로 입력해 주세요.">
+      </div>
+
+      <div class="actions">
+        <button type="submit" id="submitBtn">등록하기</button>
+        <button type="button" class="ghost" id="cancelBtn" hidden>수정 취소</button>
+        <span class="msg" id="formMsg"></span>
+      </div>
+    </form>
+  </section>
+
+  <!-- 목록 -->
+  <section>
+    <div class="filters">
+      <select id="fStudent"><option value="">전체 학생</option></select>
+      <select id="fCategory"><option value="">전체 영역</option></select>
+      <input type="search" id="fText" placeholder="검색어">
+      <span class="count" id="listCount"></span>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <footer class="site">우리 반 활동 기록장 · 기록은 생활기록부 작성 자료로 활용됩니다.</footer>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

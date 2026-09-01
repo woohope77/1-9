@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>선생님용 모아보기</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📓</text></svg>">
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+
+<header class="site wide">
+  <div class="inner">
+    <h1 id="siteTitle">선생님용 모아보기</h1>
+    <p class="sub">기간·학생·영역별로 걸러서 보고, 엑셀로 내려받거나 학생별 초안을 뽑을 수 있습니다.</p>
+    <nav>
+      <a href="index.html">기록하기</a>
+      <a href="admin.html" class="on">선생님용 모아보기</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap wide">
+
+  <div id="setupWarning" class="setup-warning" hidden>
+    아직 Supabase 연결 정보가 입력되지 않았습니다. <code>config.js</code>를 확인해 주세요.
+  </div>
+
+  <section class="card">
+    <div class="filters" style="margin-bottom:0">
+      <select id="fStudent"><option value="">전체 학생</option></select>
+      <select id="fCategory"><option value="">전체 영역</option></select>
+      <input type="date" id="fFrom" title="시작일">
+      <input type="date" id="fTo" title="종료일">
+      <input type="search" id="fText" placeholder="검색어">
+      <button class="sm ghost" id="resetBtn">초기화</button>
+      <span class="count" id="listCount"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>내려받기 · 초안 만들기</h2>
+    <p class="hint">아래 버튼은 현재 필터가 적용된 결과에만 적용됩니다.</p>
+    <div class="actions" style="flex-wrap:wrap">
+      <button id="csvBtn">엑셀(CSV)로 내려받기</button>
+      <button class="ghost" id="draftBtn">학생별 초안 만들기</button>
+      <button class="ghost" id="copyBtn" hidden>초안 전체 복사</button>
+      <span class="msg" id="msg"></span>
+    </div>
+    <div id="draft" class="summary" hidden style="margin-top:16px"></div>
+  </section>
+
+  <section>
+    <div class="tablebox">
+      <table>
+        <thead>
+          <tr>
+            <th>번호</th><th>이름</th><th>날짜</th><th>영역</th><th>활동명</th>
+            <th>활동 내용</th><th>역할 및 기여</th><th>배우고 느낀 점</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div id="emptyBox"></div>
+  </section>
+
+  <footer class="site">기록 원본은 Supabase의 activities 테이블에 저장됩니다.</footer>
+</div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>
