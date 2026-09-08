@@ -6,19 +6,14 @@
 window.CLASS_CONFIG = {
 
   // ── 1. Supabase 연결 정보 ──────────────────────────────────
-  //    Supabase 대시보드 → 프로젝트 → Connect 버튼 (또는 Settings → API Keys)
-  //    에서 복사한 값을 따옴표 안에 붙여넣으세요.
-  SUPABASE_URL: "https://rklwgzzqagnocyuynmgv.supabase.cosupabase.co",
+  SUPABASE_URL: "https://rklwgzzqagnocyuynmgv.supabase.co",
   SUPABASE_KEY: "sb_publishable_ShiLG6aBfZspwCTH5h29qA_FeMOVfDJ",
-
 
   // ── 2. 학급 이름 ──────────────────────────────────────────
   CLASS_NAME: "1학년 9반",
   SCHOOL_YEAR: "2026학년도",
 
-
   // ── 3. 학생 명단 (번호와 이름을 우리 반에 맞게 바꾸세요) ──
-  //    줄을 지우거나 추가하면 됩니다. 마지막 줄 뒤 쉼표는 있어도 됩니다.
   STUDENTS: [
     { no: 1,  name: "곽서진" },
     { no: 2,  name: "권민정" },
@@ -35,15 +30,15 @@ window.CLASS_CONFIG = {
     { no: 13, name: "안예주" },
     { no: 14, name: "안채윤" },
     { no: 15, name: "여승연" },
-    { no: 16, name: "예채원" },  
+    { no: 16, name: "예채원" },
     { no: 17, name: "오다윤" },
     { no: 18, name: "오수연" },
-    { no: 19, name: "오윤하" }, 
+    { no: 19, name: "오윤하" },
     { no: 20, name: "윤정원" },
     { no: 21, name: "이세아" },
     { no: 22, name: "이유빈" },
     { no: 23, name: "이지유" },
-    { no: 24, name: "이채연" },  
+    { no: 24, name: "이채연" },
     { no: 25, name: "이채윤" },
     { no: 26, name: "임슬빈" },
     { no: 27, name: "정지민" },
@@ -51,19 +46,35 @@ window.CLASS_CONFIG = {
     { no: 29, name: "최서윤" },
     { no: 30, name: "허시현" },
     { no: 31, name: "최현서" },
-],
-
-  // ── 4. 활동 영역 (필요하면 고치세요) ──────────────────────
-  CATEGORIES: [
-    "자율활동",
-    "진로활동",
-    "독서활동",
-    "사진보관함",
-    "게시판",
-    "기타",
   ],
 
+  // ── 4. 활동 영역 ──────────────────────────────────────────
+  //    simple: true       역할·느낀 점 칸을 쓰지 않습니다 (간단히 기록)
+  //    photo: "required"  사진을 반드시 올려야 합니다
+  //    photo: "off"       사진 칸을 아예 숨깁니다
+  CATEGORIES: [
+    { name: "자율활동" },
+    { name: "진로활동" },
+    { name: "독서활동" },
+    { name: "개인 장점 기록활동" },
+    { name: "사진보관함", photo: "required", simple: true },
+    { name: "게시판", simple: true },
+    { name: "기타" },
+  ],
 
-  // ── 5. 학생들에게 보여줄 안내 문구 ────────────────────────
+  // ── 5. 영역당 최대 개수 ───────────────────────────────────
+  //    이 숫자를 바꾸면 supabase.sql 의 max_per_category 도
+  //    같은 숫자로 바꾸고 다시 Run 해야 실제로 적용됩니다.
+  MAX_PER_CATEGORY: 3,
+
+  // ── 6. AI 생기부 초안 (선생님용 화면에서만 보입니다) ──────
+  AI: {
+    ENABLED: true,
+    ENDPOINT: "/api/draft",
+    TARGETS: ["자율활동", "진로활동"],
+    DEFAULT_LENGTH: 500,
+  },
+
+  // ── 7. 학생들에게 보여줄 안내 문구 ────────────────────────
   NOTICE: "활동이 끝나면 그날 안에 기록해 두세요. 구체적으로 쓸수록 생활기록부에 그대로 반영하기 좋습니다.",
 };
