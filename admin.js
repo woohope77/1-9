@@ -19,8 +19,29 @@ for (const s of STUDENTS) {
   $("aiStudent").add(new Option(`${s.no}번 ${s.name}`, String(s.no)));
 }
 for (const c of CATEGORIES) $("fCategory").add(new Option(c.name, c.name));
-for (const name of (AI.TARGETS || ["자율활동"])) $("aiCategory").add(new Option(name, name));
+
+/* 초안 종류: 문자열이면 같은 이름의 영역에서 특기사항을 씁니다.
+   객체면 label(화면 이름) · from(자료로 쓸 영역들) · kind("activity"|"summary") · length(기본 글자 수) */
+const TARGETS = (AI.TARGETS || ["자율활동"]).map((t) =>
+  typeof t === "string"
+    ? { label: t, from: [t], kind: "activity" }
+    : {
+        label: t.label || (t.from && t.from[0]) || "초안",
+        from: (t.from && t.from.length ? t.from : [t.label]).filter(Boolean),
+        kind: t.kind || "activity",
+        length: t.length,
+      });
+const targetByLabel = (l) => TARGETS.find((t) => t.label === l) || TARGETS[0];
+
+for (const t of TARGETS) $("aiCategory").add(new Option(t.label, t.label));
 if (AI.DEFAULT_LENGTH) $("aiLength").value = String(AI.DEFAULT_LENGTH);
+
+/* 종류를 바꾸면 그 종류의 기본 글자 수로 맞춰 줍니다 */
+$("aiCategory").addEventListener("change", () => {
+  const t = targetByLabel($("aiCategory").value);
+  if (t.length && [...$("aiLength").options].some((o) => o.value === String(t.length)))
+    $("aiLength").value = String(t.length);
+});
 
 let password = "";
 let posts = [];
@@ -31,7 +52,7 @@ function say(id, t, kind) {
   if (t && kind === "ok") setTimeout(() => { if ($(id).textContent === t) $(id).textContent = ""; }, 4000);
 }
 
-/* ── 잠금 해제 ─────────────────────────────────────── */
+/* ── 잠금 해제 ───────────────────────────────────── */
 const remember = (pw) => { try { sessionStorage.setItem(SESSION_KEY, pw); } catch {} };
 const recall = () => { try { return sessionStorage.getItem(SESSION_KEY) || ""; } catch { return ""; } };
 const forget = () => { try { sessionStorage.removeItem(SESSION_KEY); } catch {} };
@@ -75,7 +96,7 @@ $("lockBtn").addEventListener("click", (e) => {
   location.reload();
 });
 
-/* ── 목록 ──────────────────────────────────────────── */
+/* ── 목록 ────────────────────────────────────────── */
 async function reload() {
   const { data, error } = await db.rpc("list_all_activities", { p_password: password });
   if (error) return say("msg", "불러오기 실패: " + error.message, "err");
@@ -136,7 +157,7 @@ $("resetBtn").addEventListener("click", () => {
   render();
 });
 
-/* ── CSV ───────────────────────────────────────────── */
+/* ── CSV ─────────────────────────────────────────── */
 $("csvBtn").addEventListener("click", () => {
   const rows = filtered();
   if (!rows.length) return say("msg", "내려받을 기록이 없습니다.", "err");
@@ -149,7 +170,7 @@ $("csvBtn").addEventListener("click", () => {
     new Date(p.created_at).toLocaleString("ko-KR"),
   ].map(q).join(","));
 
-  const csv = "﻿" + [head.map(q).join(","), ...body].join("\r\n");
+  const csv = "\ufeff" + [head.map(q).join(","), ...body].join("\r\n");
   download(`${className}_활동기록_${new Date().toLocaleDateString("sv-SE")}.csv`,
            csv, "text/csv;charset=utf-8");
   say("msg", `${rows.length}건을 내려받았습니다.`, "ok");
@@ -213,7 +234,7 @@ async function copyText(text, msgId) {
   }
 }
 
-/* ── 생기부 초안 ───────────────────────────────────── */
+/* ── 생기부 초안 ─────────────────────────────────── */
 
 /* 화면 문구를 방식에 맞게 바꿉니다 */
 function applyAiMode() {
@@ -230,15 +251,46 @@ function applyAiMode() {
 }
 applyAiMode();
 
-/* ChatGPT·Claude에 그대로 붙여넣을 프롬프트 */
-function buildPrompt(category, length, records) {
-  const material = records.map((r, i) => {
-    const lines = [`[기록 ${i + 1}] ${r.activity_date} ${r.title}`.trim()];
+/* 기록들을 프롬프트에 넣을 형태로 정리합니다 */
+function materialOf(records, showCategory) {
+  return records.map((r, i) => {
+    const head = showCategory
+      ? `[기록 ${i + 1}] ${r.activity_date} · ${r.category} · ${r.title}`
+      : `[기록 ${i + 1}] ${r.activity_date} ${r.title}`;
+    const lines = [head.trim()];
     if (r.content) lines.push(`- 활동 내용: ${r.content}`);
     if (r.role) lines.push(`- 학생이 맡은 역할과 기여: ${r.role}`);
     if (r.reflection) lines.push(`- 학생이 배우고 느낀 점: ${r.reflection}`);
     return lines.join("\n");
   }).join("\n\n");
+}
+
+/* 행동특성 및 종합의견 초안 프롬프트 */
+function buildSummaryPrompt(length, records) {
+  return [
+    "아래는 우리 반 학생 한 명이 한 학년 동안 스스로 남긴 기록입니다.",
+    "이 기록만을 근거로 학교생활기록부 '행동특성 및 종합의견' 초안을 써 주세요.",
+    "",
+    "[지켜 주실 것]",
+    "1. 제공된 기록에 없는 사실·수상·성과·수치는 절대 지어내지 마세요.",
+    "2. 문장은 명사형으로 끝맺습니다. (~함, ~을 보임, ~하였음)",
+    "3. 학생 이름이나 '학생은' 같은 주어를 쓰지 않습니다.",
+    "4. 학생의 성격·태도·강점을 먼저 제시하고, 그렇게 판단한 근거가 되는 구체적인 행동이나 장면을 이어 씁니다.",
+    "5. '성실함', '착함' 같은 추상적 평가만 나열하지 말고 반드시 근거가 되는 행동을 함께 씁니다.",
+    "6. 한 해 동안의 변화나 성장이 기록에 드러나면 그 흐름이 보이도록 씁니다.",
+    "7. 단점을 지적하기보다 앞으로의 성장 가능성으로 표현합니다. 기록에 없는 단점은 쓰지 않습니다.",
+    "8. 줄바꿈 없이 이어지는 한 문단으로 씁니다.",
+    "9. 다른 설명이나 머리말 없이 종합의견 문장만 출력합니다.",
+    `10. 분량은 공백 포함 ${length}자 안팎으로 맞춰 주세요.`,
+    "",
+    "[학생이 남긴 기록]",
+    materialOf(records, true),
+  ].join("\n");
+}
+
+/* 창의적 체험활동 특기사항 초안 프롬프트 */
+function buildPrompt(category, length, records) {
+  const material = materialOf(records, false);
 
   return [
     `아래는 우리 반 학생 한 명의 「${category}」 활동 기록입니다.`,
@@ -262,17 +314,23 @@ function buildPrompt(category, length, records) {
 $("aiBtn").addEventListener("click", async () => {
   const no = Number($("aiStudent").value);
   const student = STUDENTS.find((s) => s.no === no);
-  const category = $("aiCategory").value;
+  const target = targetByLabel($("aiCategory").value);
+  const category = target.label;
   const length = Number($("aiLength").value) || 500;
-  const records = posts.filter((p) => p.student_no === no && p.category === category);
+  const records = posts
+    .filter((p) => p.student_no === no && target.from.includes(p.category))
+    .sort((a, b) => a.activity_date.localeCompare(b.activity_date));
 
   if (!student) return say("aiMsg", "학생을 골라 주세요.", "err");
   if (!records.length)
-    return say("aiMsg", `${student.no}번 ${student.name} 학생의 「${category}」 기록이 없습니다.`, "err");
+    return say("aiMsg",
+      `${student.no}번 ${student.name} 학생의 「${target.from.join(", ")}」 기록이 없습니다.`, "err");
 
   // 무료 방식: 프롬프트만 만들어 줍니다
   if (AI_MODE === "prompt") {
-    $("aiOut").value = buildPrompt(category, length, records);
+    $("aiOut").value = target.kind === "summary"
+      ? buildSummaryPrompt(length, records)
+      : buildPrompt(category, length, records);
     $("aiLen").textContent = $("aiOut").value.length;
     $("aiOutWrap").hidden = false;
     $("aiCopy").hidden = false;
@@ -291,10 +349,11 @@ $("aiBtn").addEventListener("click", async () => {
         password,
         className,
         category,
-        length: Number($("aiLength").value) || 500,
+        kind: target.kind,
+        length,
         student: { no: student.no, name: student.name },
         records: records.map((p) => ({
-          date: p.activity_date, title: p.title,
+          date: p.activity_date, title: p.title, category: p.category,
           content: p.content, role: p.role, reflection: p.reflection,
         })),
       }),
@@ -332,6 +391,6 @@ if (AI_MODE === "prompt") {
 }
 $("aiCopy").addEventListener("click", () => copyText($("aiOut").value, "aiMsg"));
 
-/* ── 시작 ──────────────────────────────────────────── */
+/* ── 시작 ────────────────────────────────────────── */
 const saved = recall();
 if (saved) unlock(saved, true);
