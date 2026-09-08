@@ -9,6 +9,9 @@ document.title = `${className} · 선생님용`;
 $("siteTitle").textContent = `${className} 선생님용`;
 
 const AI = CFG.AI || {};
+// "prompt" = 프롬프트만 만들어 주고 ChatGPT·Claude에 붙여넣기 (무료)
+// "api"    = OpenAI 키를 써서 사이트에서 바로 초안 생성 (Vercel 환경변수 필요)
+const AI_MODE = String(AI.MODE || "prompt").toLowerCase();
 const SESSION_KEY = "class-record-teacher";
 
 for (const s of STUDENTS) {
@@ -37,7 +40,13 @@ async function unlock(pw, quiet) {
   if (!db) { say("lockMsg", "Supabase 연결 정보가 설정되지 않았습니다.", "err"); return false; }
   const { data, error } = await db.rpc("list_all_activities", { p_password: pw });
   if (error) {
-    if (!quiet) say("lockMsg", "비밀번호가 맞지 않습니다.", "err");
+    if (!quiet) {
+      const m = error.message || "";
+      // 진짜 '비밀번호 틀림'과 설정 문제를 구분해서 보여 줍니다.
+      say("lockMsg", m.includes("비밀번호")
+        ? "비밀번호가 맞지 않습니다."
+        : "설정 문제로 열지 못했습니다 → " + m, "err");
+    }
     forget();
     return false;
   }
@@ -204,16 +213,72 @@ async function copyText(text, msgId) {
   }
 }
 
-/* ── AI 생기부 초안 ────────────────────────────────── */
+/* ── 생기부 초안 ───────────────────────────────────── */
+
+/* 화면 문구를 방식에 맞게 바꿉니다 */
+function applyAiMode() {
+  const hint = document.querySelector("#aiCard .hint");
+  const note = document.querySelector("#aiCard .note-inline");
+  if (AI_MODE === "prompt") {
+    document.querySelector("#aiCard h2").textContent = "생활기록부 초안 프롬프트 만들기";
+    if (hint) hint.textContent =
+      "고른 학생의 해당 영역 기록을 넣은 프롬프트를 만들어 드립니다. 복사해서 ChatGPT나 Claude 대화창에 붙여넣으면 초안이 나옵니다.";
+    $("aiBtn").textContent = "프롬프트 만들기";
+    if (note) note.textContent =
+      "AI가 쓴 초안은 그대로 쓰지 마시고, 실제로 관찰하신 내용과 맞는지 확인하고 고쳐서 사용해 주세요.";
+  }
+}
+applyAiMode();
+
+/* ChatGPT·Claude에 그대로 붙여넣을 프롬프트 */
+function buildPrompt(category, length, records) {
+  const material = records.map((r, i) => {
+    const lines = [`[기록 ${i + 1}] ${r.activity_date} ${r.title}`.trim()];
+    if (r.content) lines.push(`- 활동 내용: ${r.content}`);
+    if (r.role) lines.push(`- 학생이 맡은 역할과 기여: ${r.role}`);
+    if (r.reflection) lines.push(`- 학생이 배우고 느낀 점: ${r.reflection}`);
+    return lines.join("\n");
+  }).join("\n\n");
+
+  return [
+    `아래는 우리 반 학생 한 명의 「${category}」 활동 기록입니다.`,
+    `이 기록만을 근거로 학교생활기록부 창의적 체험활동 특기사항 초안을 써 주세요.`,
+    "",
+    "[지켜 주실 것]",
+    "1. 제공된 기록에 없는 활동·수상·성과·수치는 절대 지어내지 마세요.",
+    "2. 문장은 명사형으로 끝맺습니다. (~함, ~을 보임, ~하였음)",
+    "3. 학생 이름이나 '학생은' 같은 주어를 쓰지 않습니다.",
+    "4. '활동 → 학생이 맡은 역할과 구체적 행동 → 그로써 드러난 역량이나 변화' 순서로 이어 씁니다.",
+    "5. '성실함', '훌륭함' 같은 추상적 칭찬만 나열하지 말고, 그렇게 판단한 근거가 되는 행동을 함께 씁니다.",
+    "6. 줄바꿈 없이 이어지는 한 문단으로 씁니다.",
+    "7. 다른 설명이나 머리말 없이 특기사항 문장만 출력합니다.",
+    `8. 분량은 공백 포함 ${length}자 안팎으로 맞춰 주세요.`,
+    "",
+    "[활동 기록]",
+    material,
+  ].join("\n");
+}
+
 $("aiBtn").addEventListener("click", async () => {
   const no = Number($("aiStudent").value);
   const student = STUDENTS.find((s) => s.no === no);
   const category = $("aiCategory").value;
+  const length = Number($("aiLength").value) || 500;
   const records = posts.filter((p) => p.student_no === no && p.category === category);
 
   if (!student) return say("aiMsg", "학생을 골라 주세요.", "err");
   if (!records.length)
     return say("aiMsg", `${student.no}번 ${student.name} 학생의 「${category}」 기록이 없습니다.`, "err");
+
+  // 무료 방식: 프롬프트만 만들어 줍니다
+  if (AI_MODE === "prompt") {
+    $("aiOut").value = buildPrompt(category, length, records);
+    $("aiLen").textContent = $("aiOut").value.length;
+    $("aiOutWrap").hidden = false;
+    $("aiCopy").hidden = false;
+    say("aiMsg", `기록 ${records.length}건을 넣었습니다. 복사해서 붙여넣으세요.`, "ok");
+    return;
+  }
 
   $("aiBtn").disabled = true;
   say("aiMsg", "초안을 쓰는 중… (10초쯤 걸립니다)");
@@ -260,6 +325,11 @@ $("aiBtn").addEventListener("click", async () => {
 $("aiOut").addEventListener("input", () => {
   $("aiLen").textContent = $("aiOut").value.length;
 });
+if (AI_MODE === "prompt") {
+  const counter = $("aiOutWrap").querySelector(".counter");
+  if (counter) counter.innerHTML =
+    '<span id="aiLen">0</span>자 · 아래 <b>복사</b>를 누르고 ChatGPT나 Claude 대화창에 붙여넣으세요';
+}
 $("aiCopy").addEventListener("click", () => copyText($("aiOut").value, "aiMsg"));
 
 /* ── 시작 ──────────────────────────────────────────── */
