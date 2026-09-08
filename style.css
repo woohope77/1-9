@@ -166,10 +166,53 @@ td.num { text-align: right; white-space: nowrap; color: var(--ink-soft); }
 /* 번호·이름·날짜·영역은 줄바꿈 없이, 서술형 칸은 넓게 */
 table th:nth-child(-n+4), table td:nth-child(-n+4) { white-space: nowrap; }
 table th:nth-child(5),    table td:nth-child(5)    { min-width: 150px; }
-table th:nth-child(n+6),  table td:nth-child(n+6)  { min-width: 190px; }
+table th:nth-child(n+6):nth-child(-n+8),
+table td:nth-child(n+6):nth-child(-n+8)            { min-width: 190px; }
+table th:nth-child(9),    table td:nth-child(9)    { width: 70px; }
 
 .summary { white-space: pre-wrap; font-size: 14px; background: #fff;
   border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+
+/* ── 영역별 잔여 개수 ───────────────────────────────── */
+.quota { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
+.qchip {
+  font-size: 12.5px; padding: 4px 11px; border-radius: 999px;
+  background: #f2f5f9; border: 1px solid var(--line); color: var(--ink-soft);
+}
+.qchip b { color: var(--ink); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.qchip.full { background: #fdf0ef; border-color: #f0cbc8; color: var(--danger); }
+.qchip.full b { color: var(--danger); }
+
+/* ── 사진 ───────────────────────────────────────────── */
+input[type="file"] { padding: 7px 9px; background: #fff; }
+.photo-preview { margin-top: 10px; }
+.photo-preview img {
+  display: block; max-width: 100%; max-height: 240px;
+  border-radius: 9px; border: 1px solid var(--line);
+}
+.photo-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.photo-actions .tip { color: var(--ink-faint); font-size: 12.5px; }
+
+.post .shot { display: block; margin: 0 0 12px; }
+.post .shot img {
+  display: block; max-width: 100%; max-height: 300px;
+  border-radius: 9px; border: 1px solid var(--line);
+}
+img.thumb {
+  width: 54px; height: 54px; object-fit: cover;
+  border-radius: 6px; border: 1px solid var(--line); display: block;
+}
+
+/* ── 잠금 화면 ──────────────────────────────────────── */
+.card.lock { max-width: 460px; margin-left: auto; margin-right: auto; margin-top: 40px; }
+
+/* ── AI 초안 ────────────────────────────────────────── */
+#aiOut { min-height: 170px; line-height: 1.8; }
+.note-inline {
+  margin-top: 10px; font-size: 13px; color: var(--warn-ink, #85601a);
+  background: #fff6e6; border: 1px solid #f2d9a8;
+  border-radius: 8px; padding: 9px 13px;
+}
 
 /* ── 설정 경고 ──────────────────────────────────────── */
 .setup-warning {
