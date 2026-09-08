@@ -22,26 +22,38 @@ for (const c of CATEGORIES) $("fCategory").add(new Option(c.name, c.name));
 
 /* 초안 종류: 문자열이면 같은 이름의 영역에서 특기사항을 씁니다.
    객체면 label(화면 이름) · from(자료로 쓸 영역들) · kind("activity"|"summary") · length(기본 글자 수) */
+const FALLBACK_LEN = Number(AI.DEFAULT_LENGTH) || 500;
 const TARGETS = (AI.TARGETS || ["자율활동"]).map((t) =>
   typeof t === "string"
-    ? { label: t, from: [t], kind: "activity" }
+    ? { label: t, from: [t], kind: "activity", length: FALLBACK_LEN }
     : {
         label: t.label || (t.from && t.from[0]) || "초안",
         from: (t.from && t.from.length ? t.from : [t.label]).filter(Boolean),
         kind: t.kind || "activity",
-        length: t.length,
+        length: Number(t.length) || FALLBACK_LEN,
       });
 const targetByLabel = (l) => TARGETS.find((t) => t.label === l) || TARGETS[0];
+const currentTarget = () => targetByLabel($("aiCategory").value);
 
 for (const t of TARGETS) $("aiCategory").add(new Option(t.label, t.label));
-if (AI.DEFAULT_LENGTH) $("aiLength").value = String(AI.DEFAULT_LENGTH);
 
-/* 종류를 바꾸면 그 종류의 기본 글자 수로 맞춰 줍니다 */
-$("aiCategory").addEventListener("change", () => {
-  const t = targetByLabel($("aiCategory").value);
-  if (t.length && [...$("aiLength").options].some((o) => o.value === String(t.length)))
-    $("aiLength").value = String(t.length);
-});
+/* 종류를 바꾸면 그 종류의 입력 한도를 보여 줍니다 */
+function showLimit() {
+  $("aiLimit").textContent = currentTarget().length;
+  countCheck();
+}
+$("aiCategory").addEventListener("change", showLimit);
+
+/* 받아 온 초안이 한도를 넘는지 세어 줍니다 */
+function countCheck() {
+  const limit = currentTarget().length;
+  const n = $("aiCheck").value.length;
+  const el = $("aiCheckMsg");
+  el.textContent = `${n} / ${limit}자` + (n > limit ? `  (${n - limit}자 초과)` : "");
+  el.className = "counter" + (n === 0 ? "" : n > limit ? " over" : " fit");
+}
+$("aiCheck").addEventListener("input", countCheck);
+showLimit();
 
 let password = "";
 let posts = [];
@@ -281,7 +293,8 @@ function buildSummaryPrompt(length, records) {
     "7. 단점을 지적하기보다 앞으로의 성장 가능성으로 표현합니다. 기록에 없는 단점은 쓰지 않습니다.",
     "8. 줄바꿈 없이 이어지는 한 문단으로 씁니다.",
     "9. 다른 설명이나 머리말 없이 종합의견 문장만 출력합니다.",
-    `10. 분량은 공백 포함 ${length}자 안팎으로 맞춰 주세요.`,
+    `10. 분량은 공백 포함 ${length}자를 절대 넘으면 안 됩니다. 생활기록부 입력 한도라서 넘으면 못 씁니다.`,
+    `11. ${length}자에 최대한 가깝게 쓰되, 넘지는 않도록 마지막에 글자 수를 세어 확인해 주세요.`,
     "",
     "[학생이 남긴 기록]",
     materialOf(records, true),
@@ -304,7 +317,8 @@ function buildPrompt(category, length, records) {
     "5. '성실함', '훌륭함' 같은 추상적 칭찬만 나열하지 말고, 그렇게 판단한 근거가 되는 행동을 함께 씁니다.",
     "6. 줄바꿈 없이 이어지는 한 문단으로 씁니다.",
     "7. 다른 설명이나 머리말 없이 특기사항 문장만 출력합니다.",
-    `8. 분량은 공백 포함 ${length}자 안팎으로 맞춰 주세요.`,
+    `8. 분량은 공백 포함 ${length}자를 절대 넘으면 안 됩니다. 생활기록부 입력 한도라서 넘으면 못 씁니다.`,
+    `9. ${length}자에 최대한 가깝게 쓰되, 넘지는 않도록 마지막에 글자 수를 세어 확인해 주세요.`,
     "",
     "[활동 기록]",
     material,
@@ -314,9 +328,9 @@ function buildPrompt(category, length, records) {
 $("aiBtn").addEventListener("click", async () => {
   const no = Number($("aiStudent").value);
   const student = STUDENTS.find((s) => s.no === no);
-  const target = targetByLabel($("aiCategory").value);
+  const target = currentTarget();
   const category = target.label;
-  const length = Number($("aiLength").value) || 500;
+  const length = target.length;
   const records = posts
     .filter((p) => p.student_no === no && target.from.includes(p.category))
     .sort((a, b) => a.activity_date.localeCompare(b.activity_date));
@@ -334,6 +348,8 @@ $("aiBtn").addEventListener("click", async () => {
     $("aiLen").textContent = $("aiOut").value.length;
     $("aiOutWrap").hidden = false;
     $("aiCopy").hidden = false;
+    $("aiCheckWrap").hidden = false;   // 받아 온 초안 글자 수 확인 칸
+    countCheck();
     say("aiMsg", `기록 ${records.length}건을 넣었습니다. 복사해서 붙여넣으세요.`, "ok");
     return;
   }
@@ -370,10 +386,13 @@ $("aiBtn").addEventListener("click", async () => {
     }
 
     $("aiOut").value = data.text || "";
-    $("aiLen").textContent = ($("aiOut").value || "").length;
     $("aiOutWrap").hidden = false;
     $("aiCopy").hidden = false;
-    say("aiMsg", `기록 ${records.length}건을 바탕으로 썼습니다.`, "ok");
+    updateOutCount();
+    const over = $("aiOut").value.length - length;
+    say("aiMsg", over > 0
+      ? `썼지만 한도를 ${over}자 넘었습니다. 줄여서 쓰세요.`
+      : `기록 ${records.length}건을 바탕으로 썼습니다.`, over > 0 ? "err" : "ok");
   } catch (err) {
     say("aiMsg", "연결하지 못했습니다: " + (err.message || err), "err");
   } finally {
@@ -381,12 +400,20 @@ $("aiBtn").addEventListener("click", async () => {
   }
 });
 
-$("aiOut").addEventListener("input", () => {
-  $("aiLen").textContent = $("aiOut").value.length;
-});
+/* 출력 칸 글자 수 — api 방식일 때는 한도와 견줘서 보여 줍니다 */
+function updateOutCount() {
+  const n = $("aiOut").value.length;
+  if (AI_MODE === "prompt") { $("aiLen").textContent = n; return; }
+  const limit = currentTarget().length;
+  const note = $("aiOutNote");
+  note.innerHTML = `공백 포함 <span id="aiLen">${n}</span> / ${limit}자` +
+    (n > limit ? `  (${n - limit}자 초과 — 줄여 주세요)` : "");
+  note.className = "counter" + (n === 0 ? "" : n > limit ? " over" : " fit");
+}
+$("aiOut").addEventListener("input", updateOutCount);
+
 if (AI_MODE === "prompt") {
-  const counter = $("aiOutWrap").querySelector(".counter");
-  if (counter) counter.innerHTML =
+  $("aiOutNote").innerHTML =
     '<span id="aiLen">0</span>자 · 아래 <b>복사</b>를 누르고 ChatGPT나 Claude 대화창에 붙여넣으세요';
 }
 $("aiCopy").addEventListener("click", () => copyText($("aiOut").value, "aiMsg"));
