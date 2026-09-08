@@ -67,9 +67,12 @@ window.CLASS_CONFIG = {
   //    같은 숫자로 바꾸고 다시 Run 해야 실제로 적용됩니다.
   MAX_PER_CATEGORY: 3,
 
-  // ── 6. AI 생기부 초안 (선생님용 화면에서만 보입니다) ──────
+  // ── 6. 생기부 초안 (선생님용 화면에서만 보입니다) ─────────
   AI: {
     ENABLED: true,
+    // "prompt" — 프롬프트를 만들어 주면 ChatGPT·Claude에 붙여넣기 (무료)
+    // "api"    — OpenAI 키로 사이트에서 바로 초안 생성 (Vercel 환경변수 필요)
+    MODE: "prompt",
     ENDPOINT: "/api/draft",
     TARGETS: ["자율활동", "진로활동"],
     DEFAULT_LENGTH: 500,
