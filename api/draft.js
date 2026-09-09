@@ -84,7 +84,7 @@ module.exports = async (req, res) => {
 
   const user = [
     `영역: ${category} 특기사항`,
-    `대상: ${student.no || ""}번 학생`,
+    `대상: ${student.no ?? ""}번 학생`,
     `분량: 공백 포함 ${length}자 안팎`,
     "",
     "아래는 학생이 직접 남긴 활동 기록입니다.",
