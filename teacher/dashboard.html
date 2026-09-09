@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학생 대시보드</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+
+<header class="site wide">
+  <div class="inner">
+    <h1 id="siteTitle">학생 대시보드</h1>
+    <p class="sub">학생 한 명의 자료를 모아 보고, 행동특성 및 종합의견 초안을 만듭니다.</p>
+    <nav>
+      <a href="index.html">활동 기록</a>
+      <a href="dashboard.html" class="on">학생 대시보드</a>
+      <a href="students.html">학생 명단</a>
+      <a href="#" id="lockBtn" hidden>잠그기</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap wide">
+  <div id="setupWarning" class="setup-warning" hidden>
+    Supabase 연결 정보가 입력되지 않았습니다. <code>config.js</code>를 확인해 주세요.
+  </div>
+
+  <section class="card lock" id="lockCard">
+    <h2>선생님 확인</h2>
+    <p class="hint">성적·상담 기록이 담긴 화면입니다. 비밀번호를 넣어야 열립니다.</p>
+    <form id="lockForm" autocomplete="off">
+      <div class="field" style="max-width:300px">
+        <label for="pw">비밀번호</label>
+        <input type="password" id="pw" required autocomplete="current-password">
+      </div>
+      <div class="actions">
+        <button type="submit" id="lockSubmit">들어가기</button>
+        <span class="msg" id="lockMsg"></span>
+      </div>
+    </form>
+  </section>
+
+  <div id="main" hidden>
+
+    <section class="card">
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="flex:0 1 260px;margin-bottom:0">
+          <label for="student">학생</label>
+          <select id="student"></select>
+        </div>
+        <div class="field" style="flex:1 1 auto;margin-bottom:0">
+          <div id="tally" class="quota"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-kind="grade">
+      <h2>성적 자료</h2>
+      <p class="hint">과목별로 남기면 학기별 변화가 보입니다. 점수 없이 메모만 적으셔도 됩니다.</p>
+      <form class="addform" data-add="grade" autocomplete="off">
+        <div class="row">
+          <div class="field" style="flex:0 1 130px">
+            <label>학기</label>
+            <select data-f="term"><option>1학기</option><option>2학기</option></select>
+          </div>
+          <div class="field" style="flex:0 1 150px">
+            <label>과목</label>
+            <input type="text" data-f="title" placeholder="예) 수학" maxlength="30">
+          </div>
+          <div class="field" style="flex:0 1 110px">
+            <label>점수 <span class="tip">선택</span></label>
+            <input type="number" data-f="score" step="0.01" min="0" max="200" placeholder="88">
+          </div>
+          <div class="field" style="flex:0 1 120px">
+            <label>등급 <span class="tip">선택</span></label>
+            <input type="text" data-f="grade" placeholder="3등급" maxlength="20">
+          </div>
+          <div class="field" style="flex:0 1 150px">
+            <label>날짜</label>
+            <input type="date" data-f="date">
+          </div>
+        </div>
+        <div class="field">
+          <label>메모 <span class="tip">성적에 대한 관찰이나 변화</span></label>
+          <textarea data-f="body" rows="2" maxlength="600"
+            placeholder="예) 1학기보다 크게 올랐고, 모르는 문제를 쉬는 시간에 찾아와 묻는 일이 늘었음."></textarea>
+        </div>
+        <div class="actions">
+          <button type="submit">추가</button>
+          <span class="msg" data-msg="grade"></span>
+        </div>
+      </form>
+      <div class="notelist" data-list="grade"></div>
+    </section>
+
+    <section class="card" data-kind="counsel">
+      <h2>상담 기록</h2>
+      <p class="hint">상담 직후에 남겨 두면 학기 말에 근거가 됩니다.</p>
+      <form class="addform" data-add="counsel" autocomplete="off">
+        <div class="row">
+          <div class="field" style="flex:0 1 170px">
+            <label>상담 유형</label>
+            <select data-f="title">
+              <option>진로 상담</option>
+              <option>성적·학습 상담</option>
+              <option>교우 관계 상담</option>
+              <option>생활 상담</option>
+              <option>학부모 상담</option>
+              <option>기타 상담</option>
+            </select>
+          </div>
+          <div class="field" style="flex:0 1 150px">
+            <label>날짜</label>
+            <input type="date" data-f="date">
+          </div>
+        </div>
+        <div class="field">
+          <label>상담 내용</label>
+          <textarea data-f="body" rows="3" maxlength="1000"
+            placeholder="학생이 한 말과 선생님이 관찰한 점을 적어 두세요."></textarea>
+        </div>
+        <div class="field">
+          <label>조치 사항 <span class="tip">선택</span></label>
+          <input type="text" data-f="action" maxlength="200" placeholder="예) 진로 도서 3권 추천, 2주 뒤 재상담">
+        </div>
+        <div class="actions">
+          <button type="submit">추가</button>
+          <span class="msg" data-msg="counsel"></span>
+        </div>
+      </form>
+      <div class="notelist" data-list="counsel"></div>
+    </section>
+
+    <section class="card" data-kind="observation">
+      <h2>관찰한 장점</h2>
+      <p class="hint">눈에 띈 순간을 짧게라도 남겨 두면 종합의견의 가장 좋은 재료가 됩니다.</p>
+      <form class="addform" data-add="observation" autocomplete="off">
+        <div class="row">
+          <div class="field" style="flex:0 1 150px">
+            <label>날짜</label>
+            <input type="date" data-f="date">
+          </div>
+          <div class="field" style="flex:1 1 200px">
+            <label>한 줄 요약 <span class="tip">선택</span></label>
+            <input type="text" data-f="title" maxlength="40" placeholder="예) 궂은일을 먼저 맡음">
+          </div>
+        </div>
+        <div class="field">
+          <label>관찰 내용</label>
+          <textarea data-f="body" rows="2" maxlength="600"
+            placeholder="언제 어떤 상황에서 무엇을 했는지 구체적으로 적어 두세요."></textarea>
+        </div>
+        <div class="actions">
+          <button type="submit">추가</button>
+          <span class="msg" data-msg="observation"></span>
+        </div>
+      </form>
+      <div class="notelist" data-list="observation"></div>
+    </section>
+
+    <section class="card" data-kind="career">
+      <h2>진로 희망 · 독서</h2>
+      <p class="hint">학기마다 한 줄씩 남기면 진로가 어떻게 구체화됐는지 흐름이 보입니다.</p>
+      <form class="addform" data-add="career" autocomplete="off">
+        <div class="row">
+          <div class="field" style="flex:0 1 130px">
+            <label>학기</label>
+            <select data-f="term"><option>1학기</option><option>2학기</option></select>
+          </div>
+          <div class="field" style="flex:1 1 180px">
+            <label>진로 희망</label>
+            <input type="text" data-f="title" maxlength="40" placeholder="예) 간호사">
+          </div>
+          <div class="field" style="flex:0 1 150px">
+            <label>날짜</label>
+            <input type="date" data-f="date">
+          </div>
+        </div>
+        <div class="field">
+          <label>희망 사유 · 관련 활동</label>
+          <textarea data-f="body" rows="2" maxlength="600"
+            placeholder="왜 그 진로를 원하는지, 그를 위해 무엇을 했는지."></textarea>
+        </div>
+        <div class="field">
+          <label>읽은 책 <span class="tip">쉼표로 구분</span></label>
+          <input type="text" data-f="books" maxlength="300" placeholder="예) 긴긴밤, 아픔이 길이 되려면">
+        </div>
+        <div class="actions">
+          <button type="submit">추가</button>
+          <span class="msg" data-msg="career"></span>
+        </div>
+      </form>
+      <div class="notelist" data-list="career"></div>
+    </section>
+
+    <section class="card">
+      <h2>학생이 쓴 활동 기록</h2>
+      <p class="hint">학생용 사이트에서 본인이 직접 쓴 내용입니다. 여기서는 읽기만 합니다.</p>
+      <div class="notelist" id="ownList"></div>
+    </section>
+
+    <section class="card" id="sumCard">
+      <h2>행동특성 및 종합의견 초안</h2>
+      <p class="hint">위의 자료를 모두 근거로 프롬프트를 만듭니다. 넣을 자료를 골라 주세요.</p>
+      <div class="pickrow" id="sourcePicks"></div>
+      <div class="row" style="margin-top:14px">
+        <div class="field" style="flex:0 1 200px">
+          <label>생기부 입력 한도</label>
+          <div class="limitbox"><b id="sumLimit">300</b>자</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="sumBtn">프롬프트 만들기</button>
+        <button class="ghost" id="sumCopy" hidden>복사</button>
+        <span class="msg" id="sumMsg"></span>
+      </div>
+      <div id="sumOutWrap" hidden style="margin-top:16px">
+        <textarea id="sumOut" rows="10"></textarea>
+        <div class="counter" id="sumOutNote"></div>
+        <div class="note-inline">AI가 쓴 초안입니다. 실제로 관찰하신 내용과 맞는지 확인하고 고쳐서 사용해 주세요.</div>
+      </div>
+      <div class="field" id="sumCheckWrap" hidden style="margin-top:18px">
+        <label for="sumCheck">받은 초안 글자 수 확인
+          <span class="tip">AI가 써 준 초안을 붙여넣으면 한도를 넘었는지 알려 드립니다</span></label>
+        <textarea id="sumCheck" rows="5" placeholder="여기에 초안을 붙여넣으세요"></textarea>
+        <div class="counter" id="sumCheckMsg">0 / 300자</div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="site">성적·상담 기록은 선생님 비밀번호로만 열립니다. 학생 화면에서는 보이지 않습니다.</footer>
+</div>
+
+<script type="module" src="dashboard.js"></script>
+</body>
+</html>

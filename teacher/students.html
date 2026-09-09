@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학생 명단</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+
+<header class="site wide">
+  <div class="inner">
+    <h1 id="siteTitle">학생 명단</h1>
+    <p class="sub">여기서 고치면 학생용 사이트의 번호 목록도 바로 바뀝니다.</p>
+    <nav>
+      <a href="index.html">활동 기록</a>
+      <a href="dashboard.html">학생 대시보드</a>
+      <a href="students.html" class="on">학생 명단</a>
+      <a href="#" id="lockBtn" hidden>잠그기</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="setupWarning" class="setup-warning" hidden>
+    Supabase 연결 정보가 입력되지 않았습니다. <code>config.js</code>를 확인해 주세요.
+  </div>
+
+  <section class="card lock" id="lockCard">
+    <h2>선생님 확인</h2>
+    <p class="hint">비밀번호를 넣어야 명단을 고칠 수 있습니다.</p>
+    <form id="lockForm" autocomplete="off">
+      <div class="field" style="max-width:300px">
+        <label for="pw">비밀번호</label>
+        <input type="password" id="pw" required autocomplete="current-password">
+      </div>
+      <div class="actions">
+        <button type="submit" id="lockSubmit">들어가기</button>
+        <span class="msg" id="lockMsg"></span>
+      </div>
+    </form>
+  </section>
+
+  <div id="main" hidden>
+    <section class="card">
+      <h2>학생 추가 · 이름 고치기</h2>
+      <p class="hint">이미 있는 번호를 넣으면 그 학생의 이름이 바뀝니다.</p>
+      <form id="addForm" autocomplete="off">
+        <div class="row">
+          <div class="field" style="flex:0 1 120px">
+            <label for="no">번호</label>
+            <input type="number" id="no" min="0" max="100" required>
+          </div>
+          <div class="field" style="flex:1 1 200px">
+            <label for="name">이름</label>
+            <input type="text" id="name" maxlength="20" required>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit">저장</button>
+          <span class="msg" id="addMsg"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>명단</h2>
+      <p class="hint">전학 등으로 빠진 학생은 <b>숨김</b>으로 두세요. 기록은 그대로 남고 학생 화면 목록에서만 사라집니다.</p>
+      <div class="tablebox">
+        <table>
+          <thead><tr><th>번호</th><th>이름</th><th>학생 화면</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="msg" id="listMsg"></div>
+    </section>
+  </div>
+
+  <footer class="site">명단은 Supabase의 students 표에 저장됩니다.</footer>
+</div>
+
+<script type="module" src="students.js"></script>
+</body>
+</html>
