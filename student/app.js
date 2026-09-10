@@ -27,6 +27,7 @@ $("activityDate").value = today();
   const sel = $("studentNo");
   for (const s of STUDENTS) sel.add(new Option(`${s.no}번 ${s.name}`, String(s.no)));
   if (!STUDENTS.length) sel.options[0].textContent = "— 명단을 불러오지 못했습니다 —";
+  await tryRestore();
 })();
 
 for (const el of document.querySelectorAll("textarea[maxlength]")) {
@@ -46,31 +47,104 @@ function say(text, kind) {
 
 /* ── 상태 ──────────────────────────────────────────── */
 let me = null;        // { no, name }
+let myPin = "";       // 이번 접속에만 기억합니다
 let posts = [];       // 내 기록
 let pickedBlob = null; // 새로 고른 사진 (줄인 것)
 let photoAction = "keep";
 
-/* ── 번호 고르기 ───────────────────────────────────── */
-$("studentNo").addEventListener("change", async () => {
+const SESSION_KEY = "class-record-student";
+
+function sayLogin(text, kind) {
+  const el = $("loginMsg");
+  el.textContent = text;
+  el.className = "msg " + (kind || "");
+}
+
+/* ── 번호 + PIN 으로 들어가기 ──────────────────────── */
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!db) return sayLogin("Supabase 연결 정보가 아직 설정되지 않았습니다.", "err");
+
   const s = STUDENTS.find((x) => String(x.no) === $("studentNo").value);
-  me = s || null;
-  resetForm();
-  if (!me) {
-    $("formCard").hidden = true;
-    $("listSection").hidden = true;
-    $("quota").hidden = true;
-    return;
+  if (!s) return sayLogin("번호를 골라 주세요.", "err");
+  const pin = $("loginPin").value.trim();
+  if (!pin) return sayLogin("PIN을 넣어 주세요.", "err");
+
+  const btn = $("loginBtn");
+  btn.disabled = true;
+  sayLogin("확인하는 중…");
+  const ok = await signIn(s, pin);
+  btn.disabled = false;
+  if (!ok) return;
+
+  $("loginPin").value = "";
+  sayLogin("");
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ no: s.no, pin })); } catch {}
+});
+
+/* 번호와 PIN이 맞는지 서버에 물어보고, 맞으면 화면을 엽니다 */
+async function signIn(s, pin) {
+  const { data, error } = await db.rpc("list_my_activities", {
+    p_student_no: s.no, p_pin: pin,
+  });
+  if (error) {
+    sayLogin(loginError(error.message), "err");
+    return false;
   }
-  $("studentName").value = me.name;
+  me = s;
+  myPin = pin;
+  posts = data || [];
+  $("loginCard").hidden = true;
+  $("whoCard").hidden = false;
+  $("whoName").textContent = `${s.no}번 ${s.name} 기록장`;
+  $("studentName").value = s.name;
   $("formCard").hidden = false;
   $("listSection").hidden = false;
-  await load();
+  resetForm();
+  renderQuota();
+  renderCategoryOptions();
+  render();
+  return true;
+}
+
+function loginError(m) {
+  m = String(m || "");
+  if (m.includes("PIN이 맞지")) return "번호나 PIN이 맞지 않습니다. 다시 확인해 주세요.";
+  if (m.includes("아직 PIN")) return "이 번호는 아직 PIN이 없습니다. 선생님께 PIN을 받아 주세요.";
+  return "들어가지 못했습니다 → " + m;
+}
+
+/* 새로고침해도 이번 접속 동안은 그대로 있게 합니다 */
+async function tryRestore() {
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); } catch {}
+  if (!saved || !db) return;
+  const s = STUDENTS.find((x) => x.no === saved.no);
+  if (!s) return;
+  const ok = await signIn(s, saved.pin);
+  if (!ok) { try { sessionStorage.removeItem(SESSION_KEY); } catch {} sayLogin(""); }
+}
+
+$("logoutBtn").addEventListener("click", () => {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+  me = null; myPin = ""; posts = [];
+  resetForm();
+  $("whoCard").hidden = true;
+  $("quota").hidden = true;
+  $("formCard").hidden = true;
+  $("listSection").hidden = true;
+  $("loginCard").hidden = false;
+  $("studentNo").value = "";
+  $("loginPin").value = "";
+  sayLogin("나왔습니다. 수고했어요!", "ok");
 });
 
 /* ── 불러오기 ──────────────────────────────────────── */
 async function load() {
   if (!db || !me) return;
-  const { data, error } = await db.rpc("list_my_activities", { p_student_no: me.no });
+  const { data, error } = await db.rpc("list_my_activities", {
+    p_student_no: me.no, p_pin: myPin,
+  });
   if (error) {
     $("list").innerHTML =
       `<div class="empty">기록을 불러오지 못했습니다.<br><small>${esc(error.message)}</small></div>`;
@@ -229,9 +303,6 @@ $("form").addEventListener("submit", async (e) => {
   if (!editing && countIn(cat.name) >= MAX_PER_CATEGORY)
     return say(`「${cat.name}」 영역은 ${MAX_PER_CATEGORY}개까지만 쓸 수 있어요.`, "err");
 
-  const pin = $("pin").value.trim();
-  if (!/^\d{4,8}$/.test(pin)) return say("PIN은 숫자 4자리 이상으로 입력해 주세요.", "err");
-
   const simple = !!cat.simple;
   if (!simple && (!$("role").value.trim() || !$("reflection").value.trim()))
     return say("역할과 느낀 점을 모두 채워 주세요.", "err");
@@ -256,7 +327,7 @@ $("form").addEventListener("submit", async (e) => {
     if (editing) {
       const action = pickedBlob ? "replace" : (photoAction === "remove" ? "remove" : "keep");
       const { data, error } = await db.rpc("update_activity", {
-        p_id: editing, p_pin: pin,
+        p_id: editing, p_pin: myPin,
         p_date: $("activityDate").value,
         p_category: cat.name,
         p_title: $("title").value,
@@ -267,19 +338,18 @@ $("form").addEventListener("submit", async (e) => {
         p_photo_path: photoPath,
       });
       if (error) throw error;
-      if (!data) { say("PIN이 맞지 않습니다. 글을 쓸 때 정한 PIN을 확인해 주세요.", "err"); return; }
+      if (!data) { say("수정하지 못했습니다. 나갔다가 다시 들어와 주세요.", "err"); return; }
       say("수정되었습니다.", "ok");
     } else {
       const { error } = await db.rpc("add_activity", {
         p_student_no: me.no,
-        p_student_name: me.name,
+        p_pin: myPin,
         p_date: $("activityDate").value,
         p_category: cat.name,
         p_title: $("title").value,
         p_content: $("content").value,
         p_role: simple ? "" : $("role").value,
         p_reflection: simple ? "" : $("reflection").value,
-        p_pin: pin,
         p_photo_path: photoPath,
       });
       if (error) throw error;
@@ -330,7 +400,6 @@ $("list").addEventListener("click", async (e) => {
     $("content").value = p.content;
     $("role").value = p.role;
     $("reflection").value = p.reflection;
-    $("pin").value = "";
     pickedBlob = null;
     photoAction = "keep";
     const url = photoUrl(p.photo_path);
@@ -349,16 +418,15 @@ $("list").addEventListener("click", async (e) => {
     $("formTitle").textContent = "기록 수정하기";
     $("submitBtn").textContent = "수정 저장";
     $("cancelBtn").hidden = false;
-    say("PIN을 입력한 뒤 '수정 저장'을 누르세요.");
+    say("고친 뒤 '수정 저장'을 누르세요.");
     $("formCard").scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
 
-  const pin = window.prompt(`"${p.title}" 기록을 삭제합니다.\n글을 쓸 때 정한 PIN을 입력하세요.`);
-  if (pin === null) return;
-  const { data, error } = await db.rpc("delete_activity", { p_id: id, p_pin: pin.trim() });
+  if (!window.confirm(`"${p.title}" 기록을 정말 지울까요?\n지운 뒤에는 되돌릴 수 없습니다.`)) return;
+  const { data, error } = await db.rpc("delete_activity", { p_id: id, p_pin: myPin });
   if (error) return say("삭제 중 오류: " + error.message, "err");
-  if (!data) return say("PIN이 맞지 않아 삭제하지 못했습니다.", "err");
+  if (!data) return say("지우지 못했습니다. 나갔다가 다시 들어와 주세요.", "err");
   say("삭제되었습니다.", "ok");
   if ($("editId").value === id) resetForm();
   await load();
